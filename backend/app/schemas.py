@@ -74,3 +74,26 @@ class SessionCompleteRequest(BaseModel):
 class SessionCompleteResponse(BaseModel):
     session_id: int
     status: str
+
+
+# =========================
+# Conversation Schemas
+# =========================
+
+class ConversationRequest(BaseModel):
+    session_id: int
+    session_token: str
+    message: str
+
+
+class ConversationResponse(BaseModel):
+    reply: str
+
+class ConversationMessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    session_id: int
+    role: str
+    message: str
+    created_at: datetime

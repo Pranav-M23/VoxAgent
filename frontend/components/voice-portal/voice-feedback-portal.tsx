@@ -4,6 +4,13 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { Mic, MicOff } from "lucide-react"
 import { PulseWaveVisualizer } from "./pulse-wave-visualizer"
 
+declare global {
+  interface Window {
+    SpeechRecognition: any
+    webkitSpeechRecognition: any
+  }
+}
+
 interface Message {
   id: string
   role: "ai" | "customer"
@@ -11,57 +18,31 @@ interface Message {
   isStreaming?: boolean
 }
 
-const INITIAL_AI_PROMPTS = [
-  "Hi there! I'd love to hear about your experience today. What brought you in?",
-  "How would you rate your overall satisfaction with our service?",
-  "Is there anything specific we could have done better?",
-  "What was the highlight of your visit today?",
-]
 
 export function VoiceFeedbackPortal() {
   const [isRecording, setIsRecording] = useState(false)
   const [audioData, setAudioData] = useState<number[]>([])
   const [status, setStatus] = useState<"idle" | "recording" | "processing">("idle")
   const [messages, setMessages] = useState<Message[]>([
-    { id: "1", role: "ai", content: INITIAL_AI_PROMPTS[0] }
-  ])
+  {
+    id: "1",
+    role: "ai",
+    content:
+      "Hi there! I'd love to hear about your experience today. What brought you in?",
+  },
+])
   const [currentTranscript, setCurrentTranscript] = useState("")
-  const [promptIndex, setPromptIndex] = useState(0)
+ 
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationRef = useRef<number | null>(null)
   const transcriptRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<any>(null)
 
   // Simulate live transcription while recording
-  useEffect(() => {
-    if (!isRecording) return
-    
-    const simulatedPhrases = [
-      "I really ",
-      "I really enjoyed ",
-      "I really enjoyed the ",
-      "I really enjoyed the service ",
-      "I really enjoyed the service today, ",
-      "I really enjoyed the service today, especially ",
-      "I really enjoyed the service today, especially the ",
-      "I really enjoyed the service today, especially the quick ",
-      "I really enjoyed the service today, especially the quick response ",
-      "I really enjoyed the service today, especially the quick response time.",
-    ]
-    
-    let index = 0
-    const interval = setInterval(() => {
-      if (index < simulatedPhrases.length) {
-        setCurrentTranscript(simulatedPhrases[index])
-        index++
-      }
-    }, 300)
-    
-    return () => clearInterval(interval)
-  }, [isRecording])
-
+ 
   // Auto-scroll transcript
   useEffect(() => {
     if (transcriptRef.current) {
@@ -69,94 +50,173 @@ export function VoiceFeedbackPortal() {
     }
   }, [messages, currentTranscript])
 
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      
-      const audioContext = new AudioContext()
-      const analyser = audioContext.createAnalyser()
-      const source = audioContext.createMediaStreamSource(stream)
-      
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.8
-      source.connect(analyser)
-      
-      audioContextRef.current = audioContext
-      analyserRef.current = analyser
+ const startRecording = useCallback(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    })
 
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      
-      mediaRecorder.start()
-      setIsRecording(true)
-      setStatus("recording")
-      setCurrentTranscript("")
+    const audioContext = new AudioContext()
+    const analyser = audioContext.createAnalyser()
+    const source = audioContext.createMediaStreamSource(stream)
 
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-      
-      const updateAudioData = () => {
-        if (analyserRef.current) {
-          analyserRef.current.getByteFrequencyData(dataArray)
-          const normalized = Array.from(dataArray).map(v => v / 255)
-          setAudioData(normalized)
+    analyser.fftSize = 256
+    analyser.smoothingTimeConstant = 0.8
+
+    source.connect(analyser)
+
+    audioContextRef.current = audioContext
+    analyserRef.current = analyser
+
+    const mediaRecorder = new MediaRecorder(stream)
+    mediaRecorderRef.current = mediaRecorder
+
+    mediaRecorder.start()
+
+    setIsRecording(true)
+    setStatus("recording")
+    setCurrentTranscript("")
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition()
+
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = "en-US"
+
+      recognition.onresult = (event: any) => {
+        let transcript = ""
+
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript
         }
-        animationRef.current = requestAnimationFrame(updateAudioData)
+
+        setCurrentTranscript(transcript)
       }
-      updateAudioData()
 
-    } catch (error) {
-      console.error("Error accessing microphone:", error)
-      setStatus("idle")
-    }
-  }, [])
+      recognition.start()
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop()
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-    }
-    
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
+      recognitionRef.current = recognition
     }
 
-    setIsRecording(false)
-    setAudioData([])
-    setStatus("processing")
-    
-    // Add the customer message
-    const finalTranscript = currentTranscript || "I really enjoyed the service today, especially the quick response time."
-    setMessages(prev => [...prev, {
+    const dataArray = new Uint8Array(
+      analyser.frequencyBinCount
+    )
+
+    const updateAudioData = () => {
+      if (analyserRef.current) {
+        analyserRef.current.getByteFrequencyData(dataArray)
+
+        const normalized = Array.from(dataArray).map(
+          (v) => v / 255
+        )
+
+        setAudioData(normalized)
+      }
+
+      animationRef.current =
+        requestAnimationFrame(updateAudioData)
+    }
+
+    updateAudioData()
+  } catch (error) {
+    console.error("Error accessing microphone:", error)
+    setStatus("idle")
+  }
+}, [])
+
+  const stopRecording = useCallback(async () => {
+  if (mediaRecorderRef.current) {
+    mediaRecorderRef.current.stop()
+    mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+  }
+
+  if (audioContextRef.current) {
+    audioContextRef.current.close()
+  }
+
+  if (animationRef.current) {
+    cancelAnimationFrame(animationRef.current)
+  }
+  if (recognitionRef.current) {
+  recognitionRef.current.stop()
+}
+
+  setIsRecording(false)
+  
+  setAudioData([])
+  setStatus("processing")
+
+  const finalTranscript =
+    currentTranscript ||
+    "I really enjoyed the service today, especially the quick response time."
+
+  setMessages((prev) => [
+    ...prev,
+    {
       id: Date.now().toString(),
       role: "customer",
-      content: finalTranscript
-    }])
-    setCurrentTranscript("")
-    
-    // Simulate AI response after a brief delay
-    setTimeout(() => {
-      const nextIndex = (promptIndex + 1) % INITIAL_AI_PROMPTS.length
-      setPromptIndex(nextIndex)
-      setMessages(prev => [...prev, {
+      content: finalTranscript,
+    },
+  ])
+
+  setCurrentTranscript("")
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/conversation",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: 1,
+          session_token: "test123",
+          message: finalTranscript,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    setMessages((prev) => [
+      ...prev,
+      {
         id: (Date.now() + 1).toString(),
         role: "ai",
-        content: INITIAL_AI_PROMPTS[nextIndex]
-      }])
-      setStatus("idle")
-    }, 1000)
-  }, [currentTranscript, promptIndex])
+        content: data.reply,
+      },
+    ])
+  } catch (error) {
+    console.error("Conversation API error:", error)
 
-  const handleTapToSpeak = () => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: (Date.now() + 1).toString(),
+        role: "ai",
+        content:
+          "Sorry, I couldn't process your feedback right now.",
+      },
+    ])
   }
+
+  setStatus("idle")
+}, [currentTranscript])
+    
+  const handleTapToSpeak = () => {
+  if (isRecording) {
+    stopRecording()
+  } else {
+    startRecording()
+  }
+}
+    
 
   return (
     <div className="min-h-screen flex flex-col items-center px-6 py-8 bg-background">
