@@ -24,7 +24,7 @@ class Settings:
         )
         self.SESSION_BASE_URL = os.getenv(
             "SESSION_BASE_URL",
-            "http://localhost:5173/session",
+            "http://localhost:3000/session",
         )
         self.SESSION_EXPIRY_MINUTES = self._parse_int(
             os.getenv("SESSION_EXPIRY_MINUTES", "30"),
