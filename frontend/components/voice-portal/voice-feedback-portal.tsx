@@ -108,27 +108,19 @@ export function VoiceFeedbackPortal({}: Props = {}) {
 
         const sessionData = await res.json()
         const company = sessionData.company_name || "us"
-        const purpose = (sessionData.purpose || "feedback").toLowerCase()
+        const purpose = sessionData.purpose || "assist you"
         const customerName = sessionData.customer?.name || ""
         const firstName = customerName.split(" ")[0] || ""
         const nameGreeting = firstName ? `, ${firstName}` : ""
 
         setSessionMeta({ company, purpose })
 
-        // Build a dynamic greeting based on purpose + customer name
-        const greetingMap: Record<string, string> = {
-          feedback: `Hi${nameGreeting}! I'm calling from ${company} to collect your feedback about your recent experience. Could you share how it went?`,
-          sales: `Hi${nameGreeting}! I'm calling from ${company} to share some exciting offers that might be a great fit for you. Do you have a moment to chat?`,
-          bill_payment: `Hello${nameGreeting}! I'm calling from ${company} regarding your recent bill. I'd like to help you with your payment — could you confirm your account details?`,
-          bill_due: `Hi${nameGreeting}, I'm reaching out from ${company} because your bill is due soon. I wanted to give you a heads-up and help with any questions about payment.`,
-          autopay_reminder: `Hi${nameGreeting}! I'm calling from ${company} to let you know that your autopay is scheduled soon. I just wanted to make sure everything looks good on your end.`,
-          support: `Hello${nameGreeting}! I'm from ${company}'s support team. I'm here to help resolve any issues you might be facing. Could you describe what's going on?`,
-        }
-        const greeting = greetingMap[purpose] ?? `Hi${nameGreeting}! I'm calling from ${company}. How can I help you today?`
+        // Free-form greeting — works with ANY purpose string
+        const greeting = `Hi${nameGreeting}! I'm calling from ${company} regarding ${purpose}. Could you spare a moment?`
 
         setMessages([{ id: "1", role: "ai", content: greeting }])
 
-        // 2. Mark it as joined — fire-and-forget, don't block the UI
+        // Mark it as joined — fire-and-forget
         fetch(`${API_BASE}/api/session/${token}/join`, {
           method: "POST",
         }).catch(() => {})
@@ -444,11 +436,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
       <div className="text-center mb-4">
         <h1 className="text-lg font-medium text-foreground tracking-tight">
           {sessionMeta
-            ? `${sessionMeta.company} · ${
-                { feedback: "Feedback", sales: "Sales", bill_payment: "Billing",
-                  bill_due: "Billing", autopay_reminder: "Account", support: "Support" }
-                [sessionMeta.purpose] ?? "Assistant"
-              }`
+            ? `${sessionMeta.company} · ${sessionMeta.purpose}`
             : "Voice Assistant"}
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
