@@ -43,9 +43,11 @@ def create_session(
 def _is_expired(session: SessionModel) -> bool:
     if session.expires_at is None:
         return False
-    # SQLite stores datetimes as timezone-naive, so compare against naive UTC now.
+    # PostgreSQL returns timezone-aware datetimes; SQLite returns naive ones.
+    # Strip tzinfo from both sides so the comparison works universally.
+    expires = session.expires_at.replace(tzinfo=None) if session.expires_at.tzinfo else session.expires_at
     now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
-    return session.expires_at <= now_naive
+    return expires <= now_naive
 
 
 def get_active_session(
