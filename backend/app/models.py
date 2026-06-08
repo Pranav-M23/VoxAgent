@@ -27,6 +27,7 @@ class Session(Base):
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     token = Column(String(64), unique=True, index=True, nullable=False)
     company_name = Column(String(255), nullable=False)
+    purpose = Column(String(255), nullable=True, default="feedback")  # e.g. feedback, sales, bill_payment, autopay_reminder
     status = Column(String(50), nullable=False, default="pending")
     expires_at = Column(DateTime(timezone=True), nullable=False)
     joined_at = Column(DateTime(timezone=True), nullable=True)

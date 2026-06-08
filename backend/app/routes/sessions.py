@@ -41,7 +41,7 @@ async def send_session_link_endpoint(
         customer.name = payload.customer_name
         db.commit()
 
-    session = create_session(db, customer.id, payload.company_name)
+    session = create_session(db, customer.id, payload.company_name, payload.purpose)
     session_url = build_session_url(session.token)
 
     try:

@@ -21,6 +21,7 @@ def create_session(
     db: DbSession,
     customer_id: int,
     company_name: str,
+    purpose: str = "feedback",
 ) -> SessionModel:
     token = generate_token()
     expires_at = datetime.now(timezone.utc) + timedelta(
@@ -31,6 +32,7 @@ def create_session(
         customer_id=customer_id,
         token=token,
         company_name=company_name,
+        purpose=purpose,
         status="pending",
         expires_at=expires_at,
     )

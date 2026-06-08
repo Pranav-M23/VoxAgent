@@ -59,7 +59,12 @@ def conversation(
 
     # ── 4. Generate AI reply via Gemini (with full history) ──────────────────
     print("[CONV] Calling Gemini for reply...")
-    reply, end_call = generate_reply(payload.message, history=history)
+    reply, end_call = generate_reply(
+        payload.message,
+        history=history,
+        company_name=session.company_name,
+        purpose=session.purpose or "feedback",
+    )
     print(f"[CONV] Reply generated ({len(reply)} chars). end_call={end_call}")
 
     # ── 5. Save AI reply ─────────────────────────────────────────────────────

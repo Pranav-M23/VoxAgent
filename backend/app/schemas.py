@@ -33,6 +33,7 @@ class SessionRead(BaseModel):
     customer_id: int
     token: str
     company_name: str
+    purpose: Optional[str] = "feedback"
     status: str
     expires_at: datetime
     joined_at: Optional[datetime] = None
@@ -49,6 +50,7 @@ class SendSessionLinkRequest(BaseModel):
     customer_name: str = Field(..., min_length=1)
     phone: str = Field(..., min_length=5)
     company_name: str = Field(..., min_length=1)
+    purpose: str = Field(default="feedback", description="e.g. feedback, sales, bill_payment, autopay_reminder, bill_due")
 
 
 class SendSessionLinkResponse(BaseModel):

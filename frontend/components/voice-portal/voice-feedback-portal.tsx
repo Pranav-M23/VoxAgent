@@ -38,14 +38,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   const [sessionLoadStatus, setSessionLoadStatus] = useState<
     "loading" | "ready" | "invalid" | "expired"
   >("loading")
-  const [messages, setMessages] = useState<Message[]>([
-  {
-    id: "1",
-    role: "ai",
-    content:
-      "Hi, I'm calling from Toyota's feedback team. We'd love to hear about your recent service experience — could you share how your visit went?",
-  },
-])
+  const [messages, setMessages] = useState<Message[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
  
   
@@ -112,6 +105,23 @@ export function VoiceFeedbackPortal({}: Props = {}) {
         if (res.status === 410) { setSessionLoadStatus("expired"); return }
         if (!res.ok)            { setSessionLoadStatus("invalid");  return }
 
+        const sessionData = await res.json()
+        const company = sessionData.company_name || "us"
+        const purpose = (sessionData.purpose || "feedback").toLowerCase()
+
+        // Build a dynamic greeting based on purpose
+        const greetingMap: Record<string, string> = {
+          feedback: `Hi! I'm calling from ${company} to collect your feedback about your recent experience. Could you share how it went?`,
+          sales: `Hi! I'm calling from ${company} to share some exciting offers that might be a great fit for you. Do you have a moment to chat?`,
+          bill_payment: `Hello! I'm calling from ${company} regarding your recent bill. I'd like to help you with your payment — could you confirm your account details?`,
+          bill_due: `Hi, I'm reaching out from ${company} because your bill is due soon. I wanted to give you a heads-up and help with any questions about payment.`,
+          autopay_reminder: `Hi! I'm calling from ${company} to let you know that your autopay is scheduled soon. I just wanted to make sure everything looks good on your end.`,
+          support: `Hello! I'm from ${company}'s support team. I'm here to help resolve any issues you might be facing. Could you describe what's going on?`,
+        }
+        const greeting = greetingMap[purpose] ?? greetingMap["feedback"].replace("us", company)
+
+        setMessages([{ id: "1", role: "ai", content: greeting }])
+
         // 2. Mark it as joined — fire-and-forget, don't block the UI
         fetch(`${API_BASE}/api/session/${token}/join`, {
           method: "POST",
@@ -126,19 +136,20 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   }, [token])
 
   // ── Intro voice on page load ─────────────────────────────────────────────
-  // Calls /api/tts once on mount and speaks the greeting.
-  const INTRO_TEXT = "Hi, I'm calling from Toyota's feedback team. We'd love to hear about your recent service experience — could you share how your visit went?"
-
+  // Speaks the greeting message (already set in messages[0]) via TTS.
   useEffect(() => {
-    // Only play intro once the session has been validated
-    if (sessionLoadStatus !== "ready") return
+    // Only play intro once the session has been validated and greeting is set
+    if (sessionLoadStatus !== "ready" || messages.length === 0) return
+    const introText = messages[0]?.content
+    if (!introText) return
+
     async function playIntro() {
       setStatus("speaking")
       try {
         const res = await fetch(`${API_BASE}/api/tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: INTRO_TEXT }),
+          body: JSON.stringify({ text: introText }),
         })
         const data = await res.json()
         if (data.audio) {
