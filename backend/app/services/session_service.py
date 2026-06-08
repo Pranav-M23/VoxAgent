@@ -43,7 +43,9 @@ def create_session(
 def _is_expired(session: SessionModel) -> bool:
     if session.expires_at is None:
         return False
-    return session.expires_at <= datetime.now(timezone.utc)
+    # SQLite stores datetimes as timezone-naive, so compare against naive UTC now.
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    return session.expires_at <= now_naive
 
 
 def get_active_session(

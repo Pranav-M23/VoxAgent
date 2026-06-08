@@ -11,6 +11,7 @@ class Settings:
     "DATABASE_URL",
     "sqlite:///./voxagent.db"
          )
+        self.SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
         self.TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
         self.TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
         self.TWILIO_SMS_NUMBER = os.getenv("TWILIO_SMS_NUMBER", "")

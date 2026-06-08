@@ -81,13 +81,22 @@ class SessionCompleteResponse(BaseModel):
 # =========================
 
 class ConversationRequest(BaseModel):
-    session_id: int
     session_token: str
     message: str
 
 
 class ConversationResponse(BaseModel):
     reply: str
+    audio: Optional[str] = None
+    end_call: bool = False
+
+
+class TTSRequest(BaseModel):
+    text: str
+
+
+class TTSResponse(BaseModel):
+    audio: Optional[str] = None
 
 class ConversationMessageRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)

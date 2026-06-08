@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: voxagent-api
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: voxagent-db
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: SESSION_BASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_SMS_NUMBER
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SESSION_EXPIRY_MINUTES
+        value: "1440"
+
+databases:
+  - name: voxagent-db
+    databaseName: voxagent
+    user: voxagent
+    plan: free
