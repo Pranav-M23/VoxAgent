@@ -2,6 +2,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.database import Base, engine
 from app.routes import analytics, sessions
@@ -40,7 +41,21 @@ app.include_router(
 
 @app.on_event("startup")
 def on_startup():
+    # Create any missing tables
     Base.metadata.create_all(bind=engine)
+
+    # Run lightweight column migrations for existing tables.
+    # ALTER TABLE ... ADD COLUMN IF NOT EXISTS is idempotent — safe to run every deploy.
+    migrations = [
+        "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) DEFAULT 'feedback'",
+    ]
+    with engine.begin() as conn:
+        for stmt in migrations:
+            try:
+                conn.execute(text(stmt))
+                print(f"[migration] OK: {stmt[:60]}...")
+            except Exception as e:
+                print(f"[migration] Skipped ({e}): {stmt[:60]}...")
 
 @app.get("/health")
 async def health():
