@@ -1,15 +1,21 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Phone, TrendingUp, AlertCircle, LucideIcon } from "lucide-react"
+import { Phone, TrendingUp, CheckCircle, Clock, LucideIcon } from "lucide-react"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
 
 interface MetricCardProps {
   title: string
   value: string
-  change?: string
-  changeType?: "positive" | "negative" | "neutral"
+  sub?: string
+  subType?: "positive" | "negative" | "neutral"
   icon: LucideIcon
+  loading?: boolean
 }
 
-function MetricCard({ title, value, change, changeType = "neutral", icon: Icon }: MetricCardProps) {
+function MetricCard({ title, value, sub, subType = "neutral", icon: Icon, loading }: MetricCardProps) {
   return (
     <Card className="border-zinc-200">
       <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
@@ -19,14 +25,18 @@ function MetricCard({ title, value, change, changeType = "neutral", icon: Icon }
         <Icon className="w-3.5 h-3.5 text-muted-foreground/60" />
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <div className="text-xl font-semibold text-foreground tracking-tight">{value}</div>
-        {change && (
+        {loading ? (
+          <div className="h-7 w-20 bg-zinc-100 rounded animate-pulse" />
+        ) : (
+          <div className="text-xl font-semibold text-foreground tracking-tight">{value}</div>
+        )}
+        {sub && !loading && (
           <p className={`text-xs mt-0.5 ${
-            changeType === "positive" ? "text-emerald-600" :
-            changeType === "negative" ? "text-red-500" :
+            subType === "positive" ? "text-emerald-600" :
+            subType === "negative" ? "text-red-500" :
             "text-muted-foreground"
           }`}>
-            {change}
+            {sub}
           </p>
         )}
       </CardContent>
@@ -34,29 +44,80 @@ function MetricCard({ title, value, change, changeType = "neutral", icon: Icon }
   )
 }
 
-export function MetricsGrid() {
+interface Session {
+  id: number
+  status: string
+  purpose: string
+  analytics?: { satisfaction_score?: number; sentiment?: string } | null
+}
+
+interface MetricsGridProps {
+  refreshKey?: number
+}
+
+export function MetricsGrid({ refreshKey = 0 }: MetricsGridProps) {
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await fetch(`${API_BASE}/api/sessions`)
+        if (res.ok) setSessions(await res.json())
+      } catch {}
+      finally { setLoading(false) }
+    }
+    load()
+  }, [refreshKey])
+
+  const total = sessions.length
+  const completed = sessions.filter((s) => s.status === "completed").length
+  const withScores = sessions.filter((s) => s.analytics?.satisfaction_score != null)
+  const avgScore = withScores.length
+    ? (withScores.reduce((sum, s) => sum + (s.analytics!.satisfaction_score!), 0) / withScores.length).toFixed(1)
+    : "—"
+
+  // Most common purpose
+  const purposeCounts: Record<string, number> = {}
+  sessions.forEach((s) => {
+    if (s.purpose) purposeCounts[s.purpose] = (purposeCounts[s.purpose] || 0) + 1
+  })
+  const topPurpose = Object.entries(purposeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—"
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
       <MetricCard
-        title="Total Calls"
-        value="1,284"
-        change="+12% from last month"
-        changeType="positive"
+        title="Total Sessions"
+        value={loading ? "—" : String(total)}
+        sub={completed > 0 ? `${completed} completed` : undefined}
+        subType="positive"
         icon={Phone}
+        loading={loading}
       />
       <MetricCard
-        title="Average Sentiment"
-        value="7.4/10"
-        change="+0.3 from last month"
-        changeType="positive"
+        title="Completed"
+        value={loading ? "—" : String(completed)}
+        sub={total > 0 ? `${Math.round((completed / total) * 100)}% completion rate` : undefined}
+        subType="positive"
+        icon={CheckCircle}
+        loading={loading}
+      />
+      <MetricCard
+        title="Avg Satisfaction"
+        value={loading ? "—" : avgScore !== "—" ? `${avgScore}/10` : "—"}
+        sub={withScores.length > 0 ? `Based on ${withScores.length} calls` : "No data yet"}
+        subType={avgScore !== "—" && parseFloat(avgScore) >= 7 ? "positive" : "neutral"}
         icon={TrendingUp}
+        loading={loading}
       />
       <MetricCard
-        title="Top Issue"
-        value="Wait Times"
-        change="24% of conversations"
-        changeType="neutral"
-        icon={AlertCircle}
+        title="Top Purpose"
+        value={loading ? "—" : topPurpose.length > 18 ? topPurpose.slice(0, 18) + "…" : topPurpose}
+        sub={topPurpose !== "—" ? `${purposeCounts[topPurpose] || 0} sessions` : undefined}
+        subType="neutral"
+        icon={Clock}
+        loading={loading}
       />
     </div>
   )
