@@ -40,6 +40,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   >("loading")
   const [messages, setMessages] = useState<Message[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
+  const [sessionMeta, setSessionMeta] = useState<{ company: string; purpose: string } | null>(null)
  
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -108,17 +109,22 @@ export function VoiceFeedbackPortal({}: Props = {}) {
         const sessionData = await res.json()
         const company = sessionData.company_name || "us"
         const purpose = (sessionData.purpose || "feedback").toLowerCase()
+        const customerName = sessionData.customer?.name || ""
+        const firstName = customerName.split(" ")[0] || ""
+        const nameGreeting = firstName ? `, ${firstName}` : ""
 
-        // Build a dynamic greeting based on purpose
+        setSessionMeta({ company, purpose })
+
+        // Build a dynamic greeting based on purpose + customer name
         const greetingMap: Record<string, string> = {
-          feedback: `Hi! I'm calling from ${company} to collect your feedback about your recent experience. Could you share how it went?`,
-          sales: `Hi! I'm calling from ${company} to share some exciting offers that might be a great fit for you. Do you have a moment to chat?`,
-          bill_payment: `Hello! I'm calling from ${company} regarding your recent bill. I'd like to help you with your payment — could you confirm your account details?`,
-          bill_due: `Hi, I'm reaching out from ${company} because your bill is due soon. I wanted to give you a heads-up and help with any questions about payment.`,
-          autopay_reminder: `Hi! I'm calling from ${company} to let you know that your autopay is scheduled soon. I just wanted to make sure everything looks good on your end.`,
-          support: `Hello! I'm from ${company}'s support team. I'm here to help resolve any issues you might be facing. Could you describe what's going on?`,
+          feedback: `Hi${nameGreeting}! I'm calling from ${company} to collect your feedback about your recent experience. Could you share how it went?`,
+          sales: `Hi${nameGreeting}! I'm calling from ${company} to share some exciting offers that might be a great fit for you. Do you have a moment to chat?`,
+          bill_payment: `Hello${nameGreeting}! I'm calling from ${company} regarding your recent bill. I'd like to help you with your payment — could you confirm your account details?`,
+          bill_due: `Hi${nameGreeting}, I'm reaching out from ${company} because your bill is due soon. I wanted to give you a heads-up and help with any questions about payment.`,
+          autopay_reminder: `Hi${nameGreeting}! I'm calling from ${company} to let you know that your autopay is scheduled soon. I just wanted to make sure everything looks good on your end.`,
+          support: `Hello${nameGreeting}! I'm from ${company}'s support team. I'm here to help resolve any issues you might be facing. Could you describe what's going on?`,
         }
-        const greeting = greetingMap[purpose] ?? greetingMap["feedback"].replace("us", company)
+        const greeting = greetingMap[purpose] ?? `Hi${nameGreeting}! I'm calling from ${company}. How can I help you today?`
 
         setMessages([{ id: "1", role: "ai", content: greeting }])
 
@@ -437,7 +443,13 @@ export function VoiceFeedbackPortal({}: Props = {}) {
       {/* Header */}
       <div className="text-center mb-4">
         <h1 className="text-lg font-medium text-foreground tracking-tight">
-          Voice Feedback
+          {sessionMeta
+            ? `${sessionMeta.company} · ${
+                { feedback: "Feedback", sales: "Sales", bill_payment: "Billing",
+                  bill_due: "Billing", autopay_reminder: "Account", support: "Support" }
+                [sessionMeta.purpose] ?? "Assistant"
+              }`
+            : "Voice Assistant"}
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           {status === "idle"       && "Tap to share your thoughts"}
