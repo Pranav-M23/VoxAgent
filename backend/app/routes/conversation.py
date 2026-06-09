@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,7 +13,7 @@ from app.schemas import (
 )
 from app.services.analytics_service import _normalize_analysis, _upsert_analytics
 from app.services.gemini_service import analyze_transcript, generate_reply
-from app.services.sarvam_service import text_to_speech
+from app.services.sarvam_service import speech_to_text, text_to_speech
 from app.services.session_service import get_active_session, mark_completed
 
 router = APIRouter()
@@ -129,3 +129,19 @@ def tts(payload: TTSRequest):
     print(f"[TTS endpoint] Converting {len(payload.text)} chars to speech...")
     audio_b64 = text_to_speech(payload.text)
     return TTSResponse(audio=audio_b64)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# STT endpoint — used by the mobile frontend as a fallback when the browser's
+# Web Speech API is unavailable (e.g. iOS Safari, Android WebView).
+# Accepts a multipart audio file upload, returns a JSON transcript.
+# ──────────────────────────────────────────────────────────────────────────────
+@router.post("/stt")
+async def stt(audio: UploadFile = File(...)):
+    print(f"[STT endpoint] Received file: {audio.filename}, content_type: {audio.content_type}")
+    audio_bytes = await audio.read()
+    mime_type = audio.content_type or "audio/webm"
+    transcript = speech_to_text(audio_bytes, mime_type=mime_type)
+    if transcript is None:
+        raise HTTPException(status_code=422, detail="Could not transcribe audio")
+    return {"transcript": transcript}

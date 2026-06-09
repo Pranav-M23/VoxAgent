@@ -13,7 +13,8 @@ from app.schemas import (
     SessionJoinResponse,
     SessionRead,
 )
-from app.services.analytics_service import analyze_transcript_task
+from app.services.analytics_service import analyze_transcript_task, _normalize_analysis, _upsert_analytics
+from app.services.gemini_service import analyze_transcript
 from app.services.session_service import (
     build_session_url,
     create_session,
@@ -116,6 +117,18 @@ async def complete_session(
     mark_completed(db, session, payload.transcript, payload.duration, payload.recording_url)
     db.refresh(session)
 
-    analyze_transcript_task.delay(session.id, payload.transcript)
+    # Run analytics inline (guaranteed, no Celery dependency)
+    try:
+        raw_analysis = analyze_transcript(payload.transcript)
+        analysis = _normalize_analysis(raw_analysis)
+        _upsert_analytics(db, session, analysis)
+        print(f"[complete_session] Analytics saved for session {session.id}.")
+    except Exception as e:
+        print(f"[complete_session] Analytics failed (non-fatal): {e}")
+        # Attempt Celery as a secondary try
+        try:
+            analyze_transcript_task.delay(session.id, payload.transcript)
+        except Exception:
+            pass
 
     return SessionCompleteResponse(session_id=session.id, status=session.status)

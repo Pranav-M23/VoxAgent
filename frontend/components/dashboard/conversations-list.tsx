@@ -92,6 +92,12 @@ export function ConversationsList({ refreshKey = 0 }: ConversationsListProps) {
 
   useEffect(() => { loadSessions() }, [refreshKey])
 
+  // Auto-refresh every 15 seconds so new completions show up without manual refresh
+  useEffect(() => {
+    const interval = setInterval(() => loadSessions(true), 15000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div className="flex gap-4 h-[calc(100vh-13.5rem)]">
       {/* Sessions List */}

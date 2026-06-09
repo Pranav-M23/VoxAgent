@@ -27,6 +27,28 @@ interface Props {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
 
+// ── Detect Web Speech API support ──────────────────────────────────────────
+// Returns true on desktop Chrome/Edge; false on iOS Safari and most mobile browsers.
+function hasSpeechRecognition(): boolean {
+  if (typeof window === "undefined") return false
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+}
+
+// ── Detect best MediaRecorder MIME type ────────────────────────────────────
+function getSupportedMimeType(): string {
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/mp4",
+  ]
+  for (const t of types) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) return t
+  }
+  return ""
+}
+
 export function VoiceFeedbackPortal({}: Props = {}) {
   const params = useParams()
   const token = (params?.token as string) ?? ""
@@ -41,6 +63,8 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   const [messages, setMessages] = useState<Message[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
   const [sessionMeta, setSessionMeta] = useState<{ company: string; purpose: string } | null>(null)
+  // Track join time for duration calculation
+  const joinTimeRef = useRef<number>(Date.now())
  
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -51,11 +75,38 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   const recognitionRef = useRef<any>(null)
   // Tracks the currently playing AI audio so it can be interrupted
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  // Mobile STT: accumulated audio chunks while recording
+  const audioChunksRef = useRef<Blob[]>([])
+  const mimeTypeRef = useRef<string>("")
+
+  // ── buildTranscriptText ──────────────────────────────────────────────────
+  // Converts the current messages array into a readable transcript string.
+  function buildTranscriptText(msgs: Message[]): string {
+    return msgs
+      .map((m) => `${m.role === "ai" ? "Agent" : "Customer"}: ${m.content}`)
+      .join("\n")
+  }
+
+  // ── completeSessionOnBackend ─────────────────────────────────────────────
+  // Marks the session as completed on the server, triggering analytics.
+  async function completeSessionOnBackend(msgs: Message[]) {
+    const transcript = buildTranscriptText(msgs)
+    const duration = Math.round((Date.now() - joinTimeRef.current) / 1000)
+    try {
+      await fetch(`${API_BASE}/api/session/${token}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, duration }),
+      })
+      console.log("[Session] Marked completed on backend.")
+    } catch (e) {
+      console.warn("[Session] Could not mark session completed:", e)
+    }
+  }
 
   // ── endSession ─────────────────────────────────────────────────────────────
-  // Stops mic + audio and shows the thank-you screen.
-  // Called by: End Call button, AI end_call signal.
-  const endSession = useCallback(() => {
+  // Stops mic + audio, calls backend to complete session, shows thank-you screen.
+  const endSession = useCallback((currentMessages?: Message[]) => {
     // Stop media recorder + mic tracks
     if (mediaRecorderRef.current) {
       try { mediaRecorderRef.current.stop() } catch {}
@@ -84,8 +135,6 @@ export function VoiceFeedbackPortal({}: Props = {}) {
     setSessionEnded(true)
   }, [])
 
-  // Simulate live transcription while recording
- 
   // Auto-scroll transcript
   useEffect(() => {
     if (transcriptRef.current) {
@@ -94,14 +143,12 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   }, [messages, currentTranscript])
 
   // ── Session validation on mount ──────────────────────────────────────────
-  // Validates the URL token against the backend. On success, marks the
-  // session as "joined" and unlocks the intro voice + conversation.
   useEffect(() => {
-    // Don't fire until useParams() has resolved the token from the URL
     if (!token) return
+    joinTimeRef.current = Date.now()
+
     async function validateSession() {
       try {
-        // 1. Check that the session exists and is active
         const res = await fetch(`${API_BASE}/api/session/${token}`)
         if (res.status === 410) { setSessionLoadStatus("expired"); return }
         if (!res.ok)            { setSessionLoadStatus("invalid");  return }
@@ -115,7 +162,6 @@ export function VoiceFeedbackPortal({}: Props = {}) {
 
         setSessionMeta({ company, purpose })
 
-        // Free-form greeting — works with ANY purpose string
         const greeting = `Hi${nameGreeting}! I'm calling from ${company} regarding ${purpose}. Could you spare a moment?`
 
         setMessages([{ id: "1", role: "ai", content: greeting }])
@@ -134,9 +180,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   }, [token])
 
   // ── Intro voice on page load ─────────────────────────────────────────────
-  // Speaks the greeting message (already set in messages[0]) via TTS.
   useEffect(() => {
-    // Only play intro once the session has been validated and greeting is set
     if (sessionLoadStatus !== "ready" || messages.length === 0) return
     const introText = messages[0]?.content
     if (!introText) return
@@ -167,10 +211,39 @@ export function VoiceFeedbackPortal({}: Props = {}) {
     playIntro()
   }, [sessionLoadStatus]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── transcribeWithSarvam ─────────────────────────────────────────────────
+  // Sends recorded audio blobs to the backend /api/stt endpoint (Sarvam STT).
+  // Used on mobile where Web Speech API is unavailable.
+  async function transcribeWithSarvam(chunks: Blob[], mimeType: string): Promise<string> {
+    if (chunks.length === 0) return ""
+    const blob = new Blob(chunks, { type: mimeType || "audio/webm" })
+    const formData = new FormData()
+    // Use the correct file extension so the backend can infer MIME
+    const ext = mimeType.includes("ogg") ? "ogg" : mimeType.includes("mp4") ? "mp4" : "webm"
+    formData.append("audio", blob, `recording.${ext}`)
+    try {
+      const res = await fetch(`${API_BASE}/api/stt`, {
+        method: "POST",
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        return data.transcript || ""
+      }
+    } catch (e) {
+      console.warn("[STT] Sarvam STT request failed:", e)
+    }
+    return ""
+  }
+
  const startRecording = useCallback(async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+      },
     })
 
     const audioContext = new AudioContext()
@@ -185,15 +258,29 @@ export function VoiceFeedbackPortal({}: Props = {}) {
     audioContextRef.current = audioContext
     analyserRef.current = analyser
 
-    const mediaRecorder = new MediaRecorder(stream)
+    // Determine the best supported MIME type for this device
+    const mimeType = getSupportedMimeType()
+    mimeTypeRef.current = mimeType
+    audioChunksRef.current = []
+
+    const recorderOptions = mimeType ? { mimeType } : {}
+    const mediaRecorder = new MediaRecorder(stream, recorderOptions)
     mediaRecorderRef.current = mediaRecorder
 
-    mediaRecorder.start()
+    // Collect audio chunks for Sarvam STT fallback
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        audioChunksRef.current.push(e.data)
+      }
+    }
+
+    mediaRecorder.start(250) // collect chunks every 250ms
 
     setIsRecording(true)
     setStatus("recording")
     setCurrentTranscript("")
 
+    // ── Use Web Speech API if available (desktop Chrome/Edge) ────────────
     const SpeechRecognition =
       window.SpeechRecognition ||
       window.webkitSpeechRecognition
@@ -215,9 +302,17 @@ export function VoiceFeedbackPortal({}: Props = {}) {
         setCurrentTranscript(transcript)
       }
 
-      recognition.start()
+      recognition.onerror = (event: any) => {
+        // On mobile, if it errors just ignore — we'll use Sarvam STT
+        console.warn("[SpeechRecognition] error:", event.error)
+      }
 
-      recognitionRef.current = recognition
+      try {
+        recognition.start()
+        recognitionRef.current = recognition
+      } catch {
+        recognitionRef.current = null
+      }
     }
 
     const dataArray = new Uint8Array(
@@ -260,17 +355,32 @@ export function VoiceFeedbackPortal({}: Props = {}) {
     cancelAnimationFrame(animationRef.current)
   }
   if (recognitionRef.current) {
-  recognitionRef.current.stop()
-}
+    try { recognitionRef.current.stop() } catch {}
+    recognitionRef.current = null
+  }
 
   setIsRecording(false)
-  
   setAudioData([])
   setStatus("processing")
 
-  const finalTranscript =
-    currentTranscript ||
-    "I really enjoyed the service today, especially the quick response time."
+  // ── Determine the final transcript ──────────────────────────────────────
+  // On desktop: use the live Web Speech API transcript.
+  // On mobile: fall back to Sarvam STT on the recorded audio chunks.
+  let finalTranscript = currentTranscript
+
+  if (!finalTranscript && !hasSpeechRecognition()) {
+    // Mobile path — wait a tick for the last ondataavailable to fire
+    await new Promise((r) => setTimeout(r, 300))
+    finalTranscript = await transcribeWithSarvam(
+      audioChunksRef.current,
+      mimeTypeRef.current
+    )
+  }
+
+  // Ultimate fallback so the conversation can continue even if STT fails
+  if (!finalTranscript) {
+    finalTranscript = "(no speech detected)"
+  }
 
   setMessages((prev) => [
     ...prev,
@@ -300,14 +410,19 @@ export function VoiceFeedbackPortal({}: Props = {}) {
 
     const data = await response.json()
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: (Date.now() + 1).toString(),
-        role: "ai",
-        content: data.reply,
-      },
-    ])
+    const updatedMessages: Message[] = []
+    setMessages((prev) => {
+      const next = [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "ai" as const,
+          content: data.reply,
+        },
+      ]
+      updatedMessages.push(...next)
+      return next
+    })
 
     // ── Play TTS audio ──────────────────────────────────────────────────────
     if (data.audio) {
@@ -325,10 +440,11 @@ export function VoiceFeedbackPortal({}: Props = {}) {
       }
     }
 
-    // ── Handle end_call signal ──────────────────────────────────────────────
-    // Audio has already played above; now decide what comes next.
+    // ── Handle end_call signal from AI ──────────────────────────────────────
     if (data.end_call) {
-      endSession()
+      // AI triggered the end — complete session on backend then show thank-you
+      await completeSessionOnBackend(updatedMessages)
+      endSession(updatedMessages)
       return
     }
 
@@ -350,7 +466,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   }
 
   setStatus("idle")
-}, [currentTranscript])
+}, [currentTranscript, token, endSession, startRecording])
     
   const handleTapToSpeak = () => {
     if (isRecording) {
@@ -364,7 +480,51 @@ export function VoiceFeedbackPortal({}: Props = {}) {
       startRecording()
     }
   }
-    
+
+  // ── handleEndCall ──────────────────────────────────────────────────────────
+  // User manually pressed End Call — complete session and show thank-you.
+  const handleEndCall = useCallback(async () => {
+    // Capture current messages before state teardown
+    let currentMsgs: Message[] = []
+    setMessages((prev) => { currentMsgs = prev; return prev })
+
+    // Small delay to ensure state is captured
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Stop everything immediately for instant UI feedback
+    if (mediaRecorderRef.current) {
+      try { mediaRecorderRef.current.stop() } catch {}
+      try { mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop()) } catch {}
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close() } catch {}
+    }
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch {}
+    }
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    setIsRecording(false)
+    setAudioData([])
+    setStatus("idle")
+    setSessionEnded(true)
+
+    // Complete session on backend (fire-and-forget — UI already shows thank-you)
+    if (currentMsgs.length > 0) {
+      const transcript = buildTranscriptText(currentMsgs)
+      const duration = Math.round((Date.now() - joinTimeRef.current) / 1000)
+      fetch(`${API_BASE}/api/session/${token}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, duration }),
+      }).catch((e) => console.warn("[Session] Complete failed:", e))
+    }
+  }, [token])
 
   // ── Session loading / error screens ───────────────────────────────────────
   if (sessionLoadStatus === "loading") {
@@ -403,7 +563,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
           </div>
           <h2 className="text-lg font-semibold text-foreground">Invalid link</h2>
           <p className="text-sm text-muted-foreground">
-            This link is not valid. Please check your SMS or contact Toyota support.
+            This link is not valid. Please check your SMS or contact support.
           </p>
         </div>
       </div>
@@ -487,7 +647,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
 
       {/* End Call button */}
       <button
-        onClick={endSession}
+        onClick={handleEndCall}
         className="
           flex items-center justify-center gap-2
           px-5 py-2.5 rounded-xl mt-3

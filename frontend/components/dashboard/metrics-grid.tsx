@@ -71,6 +71,18 @@ export function MetricsGrid({ refreshKey = 0 }: MetricsGridProps) {
     load()
   }, [refreshKey])
 
+  // Auto-refresh every 15 seconds
+  useEffect(() => {
+    async function silentLoad() {
+      try {
+        const res = await fetch(`${API_BASE}/api/sessions`)
+        if (res.ok) setSessions(await res.json())
+      } catch {}
+    }
+    const interval = setInterval(silentLoad, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
   const total = sessions.length
   const completed = sessions.filter((s) => s.status === "completed").length
   const withScores = sessions.filter((s) => s.analytics?.satisfaction_score != null)
