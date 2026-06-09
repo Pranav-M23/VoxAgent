@@ -10,3 +10,4 @@ redis
 google-generativeai
 sarvamai
 twilio
+python-multipart
