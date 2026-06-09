@@ -8,12 +8,35 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
-def _build_context(company_name: str, purpose: str) -> str:
+# Map BCP-47 codes to natural language names for the Gemini prompt
+_LANGUAGE_NAMES: dict[str, str] = {
+    "en-IN": "English",
+    "hi-IN": "Hindi",
+    "ta-IN": "Tamil",
+    "te-IN": "Telugu",
+    "kn-IN": "Kannada",
+    "ml-IN": "Malayalam",
+    "bn-IN": "Bengali",
+    "gu-IN": "Gujarati",
+    "mr-IN": "Marathi",
+    "pa-IN": "Punjabi",
+}
+
+
+def _build_context(company_name: str, purpose: str, language_code: str = "en-IN") -> str:
     """Build a dynamic system prompt from any free-form company + purpose string."""
+    language_name = _LANGUAGE_NAMES.get(language_code, "English")
+    language_instruction = (
+        f"You MUST respond ONLY in {language_name}. Do NOT switch to English or any other language."
+        if language_code != "en-IN"
+        else "Respond in clear, conversational English."
+    )
     return f"""\
 You are a professional AI voice agent calling on behalf of {company_name}.
 
 The purpose of this call is: {purpose}
+
+Language: {language_instruction}
 
 Your job is to have a natural, focused conversation to fulfil this purpose.
 
@@ -38,18 +61,20 @@ def generate_reply(
     history: list[dict] | None = None,
     company_name: str = "our company",
     purpose: str = "assist the customer",
+    language_code: str = "en-IN",
 ) -> tuple[str, bool]:
     """Returns (reply_text, end_call).
 
     Args:
-        message:      The latest customer message.
-        history:      Prior turns, each a dict with 'role' and 'message'. Oldest first.
-        company_name: The company the agent represents (e.g. "Samsung", "Youtube").
-        purpose:      Free-form call purpose — any text (e.g. "Youtube Premium Experience").
+        message:       The latest customer message.
+        history:       Prior turns, each a dict with 'role' and 'message'. Oldest first.
+        company_name:  The company the agent represents.
+        purpose:       Free-form call purpose.
+        language_code: BCP-47 code for the response language, e.g. hi-IN, ta-IN.
     """
     history = history or []
 
-    context = _build_context(company_name, purpose)
+    context = _build_context(company_name, purpose, language_code)
 
     # Build readable transcript of prior turns
     history_lines: list[str] = []

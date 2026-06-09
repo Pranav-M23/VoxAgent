@@ -48,6 +48,7 @@ def on_startup():
     # ALTER TABLE ... ADD COLUMN IF NOT EXISTS is idempotent — safe to run every deploy.
     migrations = [
         "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) DEFAULT 'feedback'",
+        "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS language_code VARCHAR(10) DEFAULT 'en-IN'",
     ]
     with engine.begin() as conn:
         for stmt in migrations:

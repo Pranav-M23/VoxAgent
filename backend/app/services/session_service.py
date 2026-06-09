@@ -22,6 +22,7 @@ def create_session(
     customer_id: int,
     company_name: str,
     purpose: str = "feedback",
+    language_code: str = "en-IN",
 ) -> SessionModel:
     token = generate_token()
     expires_at = datetime.now(timezone.utc) + timedelta(
@@ -33,6 +34,7 @@ def create_session(
         token=token,
         company_name=company_name,
         purpose=purpose,
+        language_code=language_code,
         status="pending",
         expires_at=expires_at,
     )

@@ -59,11 +59,13 @@ def conversation(
 
     # ── 4. Generate AI reply via Gemini (with full history) ──────────────────
     print("[CONV] Calling Gemini for reply...")
+    language_code = session.language_code or "en-IN"
     reply, end_call = generate_reply(
         payload.message,
         history=history,
         company_name=session.company_name,
         purpose=session.purpose or "feedback",
+        language_code=language_code,
     )
     print(f"[CONV] Reply generated ({len(reply)} chars). end_call={end_call}")
 
@@ -78,7 +80,7 @@ def conversation(
     db.commit()
 
     # ── 6. Convert reply to speech via Sarvam TTS ────────────────────────────
-    audio_b64 = text_to_speech(reply)
+    audio_b64 = text_to_speech(reply, language_code=language_code)
     if audio_b64:
         print("[CONV] Audio ready — returning reply + audio.")
     else:
@@ -126,8 +128,8 @@ def conversation(
 # ──────────────────────────────────────────────────────────────────────────────
 @router.post("/tts", response_model=TTSResponse)
 def tts(payload: TTSRequest):
-    print(f"[TTS endpoint] Converting {len(payload.text)} chars to speech...")
-    audio_b64 = text_to_speech(payload.text)
+    print(f"[TTS endpoint] Converting {len(payload.text)} chars to speech in {payload.language_code}...")
+    audio_b64 = text_to_speech(payload.text, language_code=payload.language_code)
     return TTSResponse(audio=audio_b64)
 
 
@@ -137,11 +139,11 @@ def tts(payload: TTSRequest):
 # Accepts a multipart audio file upload, returns a JSON transcript.
 # ──────────────────────────────────────────────────────────────────────────────
 @router.post("/stt")
-async def stt(audio: UploadFile = File(...)):
-    print(f"[STT endpoint] Received file: {audio.filename}, content_type: {audio.content_type}")
+async def stt(audio: UploadFile = File(...), language_code: str = "en-IN"):
+    print(f"[STT endpoint] Received file: {audio.filename}, lang: {language_code}")
     audio_bytes = await audio.read()
     mime_type = audio.content_type or "audio/webm"
-    transcript = speech_to_text(audio_bytes, mime_type=mime_type)
+    transcript = speech_to_text(audio_bytes, mime_type=mime_type, language_code=language_code)
     if transcript is None:
         raise HTTPException(status_code=422, detail="Could not transcribe audio")
     return {"transcript": transcript}

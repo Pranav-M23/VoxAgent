@@ -44,6 +44,7 @@ class SessionRead(BaseModel):
     created_at: datetime
     customer: Optional[CustomerRead] = None
     analytics: Optional[AnalyticsRead] = None
+    language_code: Optional[str] = "en-IN"
 
 
 class SendSessionLinkRequest(BaseModel):
@@ -51,6 +52,7 @@ class SendSessionLinkRequest(BaseModel):
     phone: str = Field(..., min_length=5)
     company_name: str = Field(..., min_length=1)
     purpose: str = Field(default="feedback", description="e.g. feedback, sales, bill_payment, autopay_reminder, bill_due")
+    language_code: str = Field(default="en-IN", description="BCP-47 language code, e.g. en-IN, hi-IN, ta-IN, te-IN")
 
 
 class SendSessionLinkResponse(BaseModel):
@@ -95,6 +97,7 @@ class ConversationResponse(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
+    language_code: str = "en-IN"
 
 
 class TTSResponse(BaseModel):

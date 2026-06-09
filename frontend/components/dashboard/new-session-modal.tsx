@@ -1,9 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { X, Send, Loader2, CheckCircle } from "lucide-react"
+import { X, Send, Loader2, CheckCircle, Globe } from "lucide-react"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
+
+const LANGUAGES = [
+  { code: "en-IN", label: "English",    native: "English",    flag: "🇬🇧" },
+  { code: "hi-IN", label: "Hindi",      native: "हिंदी",       flag: "🇮🇳" },
+  { code: "ta-IN", label: "Tamil",      native: "தமிழ்",      flag: "🇮🇳" },
+  { code: "te-IN", label: "Telugu",     native: "తెలుగు",     flag: "🇮🇳" },
+  { code: "kn-IN", label: "Kannada",    native: "ಕನ್ನಡ",     flag: "🇮🇳" },
+  { code: "ml-IN", label: "Malayalam",  native: "മലയാളം",    flag: "🇮🇳" },
+  { code: "bn-IN", label: "Bengali",    native: "বাংলা",      flag: "🇮🇳" },
+  { code: "gu-IN", label: "Gujarati",   native: "ગુજરાતી",   flag: "🇮🇳" },
+  { code: "mr-IN", label: "Marathi",    native: "मराठी",      flag: "🇮🇳" },
+  { code: "pa-IN", label: "Punjabi",    native: "ਪੰਜਾਬੀ",     flag: "🇮🇳" },
+]
 
 interface Props {
   open: boolean
@@ -17,12 +30,13 @@ export function NewSessionModal({ open, onClose, onSuccess }: Props) {
     phone: "",
     company_name: "",
     purpose: "",
+    language_code: "en-IN",
   })
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ session_url: string; token: string } | null>(null)
   const [error, setError] = useState("")
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -55,11 +69,13 @@ export function NewSessionModal({ open, onClose, onSuccess }: Props) {
   }
 
   function handleClose() {
-    setForm({ customer_name: "", phone: "", company_name: "", purpose: "" })
+    setForm({ customer_name: "", phone: "", company_name: "", purpose: "", language_code: "en-IN" })
     setResult(null)
     setError("")
     onClose()
   }
+
+  const selectedLang = LANGUAGES.find((l) => l.code === form.language_code) ?? LANGUAGES[0]
 
   if (!open) return null
 
@@ -96,7 +112,9 @@ export function NewSessionModal({ open, onClose, onSuccess }: Props) {
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Session created!</p>
-                <p className="text-xs text-muted-foreground mt-0.5">SMS sent to customer</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  SMS sent · Voice language: {selectedLang.flag} {selectedLang.label}
+                </p>
               </div>
             </div>
 
@@ -171,6 +189,36 @@ export function NewSessionModal({ open, onClose, onSuccess }: Props) {
                 placeholder="e.g. Post-service feedback, Galaxy S25 upgrade offer, Bill payment reminder..."
                 className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-zinc-300 resize-none"
               />
+            </div>
+
+            {/* Language Picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Globe className="w-3 h-3" />
+                Voice Language
+              </label>
+              <div className="relative">
+                <select
+                  name="language_code"
+                  value={form.language_code}
+                  onChange={handleChange}
+                  className="w-full h-9 pl-3 pr-8 text-sm rounded-lg border border-zinc-200 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-300 appearance-none cursor-pointer"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag} {lang.label} — {lang.native}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                  <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground/70">
+                The AI agent will speak and understand in this language
+              </p>
             </div>
 
             {error && (

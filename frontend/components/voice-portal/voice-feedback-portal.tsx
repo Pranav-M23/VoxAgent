@@ -27,6 +27,19 @@ interface Props {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
 
+const LANGUAGE_LABELS: Record<string, { label: string; native: string; flag: string }> = {
+  "en-IN": { label: "English",   native: "English",  flag: "🇬🇧" },
+  "hi-IN": { label: "Hindi",     native: "हिंदी",    flag: "🇮🇳" },
+  "ta-IN": { label: "Tamil",     native: "தமிழ்",   flag: "🇮🇳" },
+  "te-IN": { label: "Telugu",    native: "తెలుగు",  flag: "🇮🇳" },
+  "kn-IN": { label: "Kannada",   native: "ಕನ್ನಡ",  flag: "🇮🇳" },
+  "ml-IN": { label: "Malayalam", native: "മലയാളം", flag: "🇮🇳" },
+  "bn-IN": { label: "Bengali",   native: "বাংলা",   flag: "🇮🇳" },
+  "gu-IN": { label: "Gujarati",  native: "ગુજરાતી",flag: "🇮🇳" },
+  "mr-IN": { label: "Marathi",   native: "मराठी",   flag: "🇮🇳" },
+  "pa-IN": { label: "Punjabi",   native: "ਪੰਜਾਬੀ",  flag: "🇮🇳" },
+}
+
 // ── Detect Web Speech API support ──────────────────────────────────────────
 // Returns true on desktop Chrome/Edge; false on iOS Safari and most mobile browsers.
 function hasSpeechRecognition(): boolean {
@@ -63,6 +76,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   const [messages, setMessages] = useState<Message[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
   const [sessionMeta, setSessionMeta] = useState<{ company: string; purpose: string } | null>(null)
+  const [languageCode, setLanguageCode] = useState<string>("en-IN")
   // Track join time for duration calculation
   const joinTimeRef = useRef<number>(Date.now())
  
@@ -156,11 +170,13 @@ export function VoiceFeedbackPortal({}: Props = {}) {
         const sessionData = await res.json()
         const company = sessionData.company_name || "us"
         const purpose = sessionData.purpose || "assist you"
+        const lang = sessionData.language_code || "en-IN"
         const customerName = sessionData.customer?.name || ""
         const firstName = customerName.split(" ")[0] || ""
         const nameGreeting = firstName ? `, ${firstName}` : ""
 
         setSessionMeta({ company, purpose })
+        setLanguageCode(lang)
 
         const greeting = `Hi${nameGreeting}! I'm calling from ${company} regarding ${purpose}. Could you spare a moment?`
 
@@ -191,7 +207,7 @@ export function VoiceFeedbackPortal({}: Props = {}) {
         const res = await fetch(`${API_BASE}/api/tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: introText }),
+          body: JSON.stringify({ text: introText, language_code: languageCode }),
         })
         const data = await res.json()
         if (data.audio) {
@@ -221,8 +237,10 @@ export function VoiceFeedbackPortal({}: Props = {}) {
     // Use the correct file extension so the backend can infer MIME
     const ext = mimeType.includes("ogg") ? "ogg" : mimeType.includes("mp4") ? "mp4" : "webm"
     formData.append("audio", blob, `recording.${ext}`)
+    // Pass language_code as a query param to the STT endpoint
+    const url = `${API_BASE}/api/stt?language_code=${encodeURIComponent(languageCode)}`
     try {
-      const res = await fetch(`${API_BASE}/api/stt`, {
+      const res = await fetch(url, {
         method: "POST",
         body: formData,
       })
@@ -610,6 +628,16 @@ export function VoiceFeedbackPortal({}: Props = {}) {
             ? `${sessionMeta.company} · ${sessionMeta.purpose}`
             : "Voice Assistant"}
         </h1>
+        {/* Language badge */}
+        {(() => {
+          const lang = LANGUAGE_LABELS[languageCode]
+          return lang ? (
+            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+              <span>{lang.flag}</span>
+              <span>{lang.native}</span>
+            </span>
+          ) : null
+        })()}
         <p className="text-sm text-muted-foreground mt-0.5">
           {status === "idle"       && "Tap to share your thoughts"}
           {status === "recording"  && "Listening — tap to stop"}
