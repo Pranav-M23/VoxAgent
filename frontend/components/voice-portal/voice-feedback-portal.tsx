@@ -364,17 +364,28 @@ export function VoiceFeedbackPortal({}: Props = {}) {
   setStatus("processing")
 
   // ── Determine the final transcript ──────────────────────────────────────
-  // On desktop: use the live Web Speech API transcript.
-  // On mobile: fall back to Sarvam STT on the recorded audio chunks.
-  let finalTranscript = currentTranscript
+  // PRIMARY:  Sarvam STT (server-side, works on ALL browsers including Android Chrome)
+  // FALLBACK: Web Speech API live transcript (only if Sarvam fails / returns empty)
+  //
+  // We ALWAYS attempt Sarvam because Android Chrome has webkitSpeechRecognition
+  // but it silently returns empty results — so hasSpeechRecognition() === true
+  // but currentTranscript is still "". Always sending audio chunks to Sarvam
+  // fixes this universally.
+  let finalTranscript = ""
 
-  if (!finalTranscript && !hasSpeechRecognition()) {
-    // Mobile path — wait a tick for the last ondataavailable to fire
-    await new Promise((r) => setTimeout(r, 300))
+  // Wait a tick so the last ondataavailable chunk is flushed before we read
+  await new Promise((r) => setTimeout(r, 350))
+
+  if (audioChunksRef.current.length > 0) {
     finalTranscript = await transcribeWithSarvam(
       audioChunksRef.current,
       mimeTypeRef.current
     )
+  }
+
+  // If Sarvam returned nothing, use the browser live transcript as backup
+  if (!finalTranscript && currentTranscript) {
+    finalTranscript = currentTranscript
   }
 
   // Ultimate fallback so the conversation can continue even if STT fails
