@@ -5,6 +5,20 @@ from sqlalchemy.sql import func
 from app.database import Base
 from datetime import datetime
 
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    company = Column(String(255), nullable=True)
+    hashed_password = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+
+
 class Customer(Base):
     __tablename__ = "customers"
 
@@ -25,10 +39,11 @@ class Session(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     token = Column(String(64), unique=True, index=True, nullable=False)
     company_name = Column(String(255), nullable=False)
-    purpose = Column(String(255), nullable=True, default="feedback")  # e.g. feedback, sales, bill_payment, autopay_reminder
-    language_code = Column(String(10), nullable=True, default="en-IN")  # BCP-47 code, e.g. hi-IN, ta-IN
+    purpose = Column(String(255), nullable=True, default="feedback")
+    language_code = Column(String(10), nullable=True, default="en-IN")
     status = Column(String(50), nullable=False, default="pending")
     expires_at = Column(DateTime(timezone=True), nullable=False)
     joined_at = Column(DateTime(timezone=True), nullable=True)
@@ -39,12 +54,14 @@ class Session(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     customer = relationship("Customer", back_populates="sessions")
+    user = relationship("User", back_populates="sessions")
     analytics = relationship(
         "Analytics",
         back_populates="session",
         uselist=False,
         cascade="all, delete-orphan",
     )
+
 
 
 class Analytics(Base):

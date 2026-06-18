@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.database import Base, engine
 from app.routes import analytics, sessions
 from app.routes.conversation import router as conversation_router
+from app.routes.auth import router as auth_router
 
 app = FastAPI(title="VoxAgent API")
 
@@ -39,6 +40,11 @@ app.include_router(
     tags=["conversation"]
 )
 
+app.include_router(
+    auth_router,
+    prefix="/api"
+)
+
 @app.on_event("startup")
 def on_startup():
     # Create any missing tables
@@ -49,6 +55,7 @@ def on_startup():
     migrations = [
         "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) DEFAULT 'feedback'",
         "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS language_code VARCHAR(10) DEFAULT 'en-IN'",
+        "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
     ]
     with engine.begin() as conn:
         for stmt in migrations:

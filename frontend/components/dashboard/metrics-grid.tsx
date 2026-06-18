@@ -4,7 +4,13 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, TrendingUp, CheckCircle, Clock, LucideIcon } from "lucide-react"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
+const API_BASE = ""  // Next.js proxy
+import { getUser } from "@/lib/auth"
+
+function authHeaders(): Record<string, string> {
+  const user = getUser()
+  return user ? { "X-User-Id": String(user.user_id) } : {}
+}
 
 interface MetricCardProps {
   title: string
@@ -63,7 +69,7 @@ export function MetricsGrid({ refreshKey = 0 }: MetricsGridProps) {
     async function load() {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/sessions`)
+        const res = await fetch(`/api/sessions`, { headers: authHeaders() })
         if (res.ok) setSessions(await res.json())
       } catch {}
       finally { setLoading(false) }
@@ -75,7 +81,7 @@ export function MetricsGrid({ refreshKey = 0 }: MetricsGridProps) {
   useEffect(() => {
     async function silentLoad() {
       try {
-        const res = await fetch(`${API_BASE}/api/sessions`)
+        const res = await fetch(`${API_BASE}/api/sessions`, { headers: authHeaders() })
         if (res.ok) setSessions(await res.json())
       } catch {}
     }

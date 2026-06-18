@@ -19,6 +19,7 @@ class Settings:
         self.LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
         self.REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.JWT_SECRET = os.getenv("JWT_SECRET", "voxagent-dev-secret-change-in-prod")
         
         self.GEMINI_BASE_URL = os.getenv(
             "GEMINI_BASE_URL",

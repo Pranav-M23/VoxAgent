@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
 from app.database import get_db
@@ -31,7 +31,9 @@ router = APIRouter(tags=["sessions"])
 async def send_session_link_endpoint(
     payload: SendSessionLinkRequest,
     db: DbSession = Depends(get_db),
+    x_user_id: Optional[str] = Header(default=None),
 ) -> SendSessionLinkResponse:
+    user_id = int(x_user_id) if x_user_id and x_user_id.isdigit() else None
     customer = db.query(Customer).filter(Customer.phone == payload.phone).first()
     if customer is None:
         customer = Customer(name=payload.customer_name, phone=payload.phone)
@@ -43,6 +45,10 @@ async def send_session_link_endpoint(
         db.commit()
 
     session = create_session(db, customer.id, payload.company_name, payload.purpose, payload.language_code)
+    if user_id:
+        session.user_id = user_id
+        db.commit()
+        db.refresh(session)
     session_url = build_session_url(session.token)
 
     try:
@@ -66,8 +72,14 @@ async def send_session_link_endpoint(
 
 
 @router.get("/sessions", response_model=List[SessionRead])
-async def list_sessions(db: DbSession = Depends(get_db)) -> List[SessionRead]:
-    return db.query(SessionModel).order_by(SessionModel.created_at.desc()).all()
+async def list_sessions(
+    db: DbSession = Depends(get_db),
+    x_user_id: Optional[str] = Header(default=None),
+) -> List[SessionRead]:
+    q = db.query(SessionModel)
+    if x_user_id and x_user_id.isdigit():
+        q = q.filter(SessionModel.user_id == int(x_user_id))
+    return q.order_by(SessionModel.created_at.desc()).all()
 
 
 @router.get("/session/{token}", response_model=SessionRead)

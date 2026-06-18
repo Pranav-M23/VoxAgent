@@ -6,8 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { X, Clock, User, FileText, Tag, Phone, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getUser } from "@/lib/auth"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
+const API_BASE = ""  // Next.js proxy
+
+function authHeaders(): Record<string, string> {
+  const user = getUser()
+  return user ? { "X-User-Id": String(user.user_id) } : {}
+}
 
 interface Customer {
   id: number
@@ -81,7 +87,7 @@ export function ConversationsList({ refreshKey = 0 }: ConversationsListProps) {
     if (!quiet) setLoading(true)
     else setRefreshing(true)
     try {
-      const res = await fetch(`${API_BASE}/api/sessions`)
+      const res = await fetch(`/api/sessions`, { headers: authHeaders() })
       if (res.ok) setSessions(await res.json())
     } catch {}
     finally {

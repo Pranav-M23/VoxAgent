@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { X, Send, Loader2, CheckCircle, Globe } from "lucide-react"
+import { getUser } from "@/lib/auth"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
+const API_BASE = ""  // use Next.js proxy routes (same-origin, no CORS)
 
 const LANGUAGES = [
   { code: "en-IN", label: "English",    native: "English",    flag: "🇬🇧" },
@@ -47,9 +48,13 @@ export function NewSessionModal({ open, onClose, onSuccess }: Props) {
     setResult(null)
 
     try {
-      const res = await fetch(`${API_BASE}/api/send-session-link`, {
+      const user = getUser()
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (user) headers["X-User-Id"] = String(user.user_id)
+
+      const res = await fetch(`/api/sessions/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(form),
       })
 
