@@ -1,253 +1,270 @@
-# VoxAgent 🎙️
+# VoxAgent
 
-AI-Powered Voice Customer Feedback Platform
+### AI-Powered Customer Feedback Intelligence Platform
 
-VoxAgent is an intelligent voice-based customer feedback system that enables businesses to conduct natural, AI-driven conversations with customers instead of relying on traditional survey forms.
-
-The platform combines speech recognition, generative AI, and text-to-speech technologies to create a seamless feedback collection experience across desktop and mobile devices.
+Transform customer conversations into actionable business insights through intelligent feedback collection, sentiment analysis, satisfaction scoring, and analytics-driven reporting.
 
 ---
 
-## ✨ Features
+## Repository Description
 
-### 🎤 Voice-Based Customer Interaction
-- Record customer responses directly from the browser
-- Works on desktop and mobile devices
-- Real-time microphone access and audio capture
-
-### 🧠 AI Conversation Engine
-- Powered by Google Gemini
-- Context-aware follow-up questions
-- Natural conversational flow
-- Dynamic response generation
-- Intelligent conversation completion
-
-### 🔊 Text-to-Speech Responses
-- Powered by Sarvam AI
-- Human-like AI voice responses
-- Automatic audio playback
-- Introductory greeting on session start
-- End-of-conversation voice messages
-
-### 📝 Speech-to-Text
-- Browser speech recognition support
-- Sarvam STT fallback for mobile reliability
-- Accurate transcription of customer responses
-
-### 📊 Feedback Collection
-- Stores customer responses
-- Stores AI-generated replies
-- Session-based conversation history
-- Structured feedback gathering
-
-### 📱 Mobile Friendly
-- Optimized for smartphones and tablets
-- Supports voice interactions through mobile browsers
-- Public deployment through cloud hosting
+AI-powered customer feedback management platform that collects reviews through intelligent conversations, analyzes sentiment, generates satisfaction scores, and delivers actionable insights through an analytics dashboard.
 
 ---
 
-# 🏗️ Architecture
+## Topics
+
+`customer-feedback` • `review-analysis` • `sentiment-analysis` • `customer-satisfaction` • `business-intelligence` • `analytics-dashboard` • `customer-experience` • `product-analytics` • `feedback-management` • `conversational-ai` • `gemini-ai` • `fastapi` • `nextjs` • `react` • `typescript` • `python` • `postgresql`
+
+---
+
+## Overview
+
+VoxAgent is an AI-powered customer feedback intelligence platform designed to help businesses collect, analyze, and understand customer opinions more effectively.
+
+Unlike traditional feedback forms and surveys, VoxAgent engages customers through intelligent conversations that encourage detailed and meaningful responses about products and services. The platform analyzes customer feedback in real time, evaluates sentiment, generates satisfaction scores, and organizes insights into a centralized analytics dashboard.
+
+By converting customer conversations into structured business intelligence, VoxAgent enables organizations to identify strengths, uncover recurring issues, monitor satisfaction trends, and make data-driven decisions to improve products and customer experiences.
+
+---
+
+## Problem Statement
+
+Many businesses rely on static feedback forms that often produce limited and low-quality responses. As a result, organizations struggle to understand customer concerns, identify product issues, and measure satisfaction accurately.
+
+VoxAgent addresses this challenge by providing an intelligent feedback collection system that:
+
+* Encourages richer customer responses
+* Analyzes sentiment automatically
+* Generates measurable satisfaction scores
+* Stores review history for future analysis
+* Provides actionable insights through dashboards
+
+---
+
+## Key Features
+
+### Intelligent Feedback Collection
+
+* AI-driven conversational feedback gathering
+* Dynamic and context-aware questioning
+* Natural customer interaction experience
+* Detailed review collection
+
+### Sentiment Analysis
+
+* Positive, negative, and neutral sentiment detection
+* Emotion and opinion analysis
+* Identification of recurring customer concerns
+* Automated feedback categorization
+
+### Satisfaction Scoring
+
+* AI-generated customer satisfaction ratings
+* Product performance tracking
+* Customer experience measurement
+* Comparative feedback analysis
+
+### Analytics Dashboard
+
+* Customer satisfaction metrics
+* Review trends and reporting
+* Conversation history visualization
+* Product performance monitoring
+* Insight-driven decision support
+
+### Review Management
+
+* Structured feedback storage
+* Historical review tracking
+* Searchable conversation records
+* Product-specific review analysis
+
+### Business Intelligence
+
+* Actionable customer insights
+* Data-driven product improvement recommendations
+* Customer experience monitoring
+* Performance benchmarking
+
+---
+
+## Technology Stack
+
+### Backend
+
+* FastAPI
+* Python
+* SQLAlchemy
+* PostgreSQL
+* Pydantic
+* Uvicorn
+
+### Frontend
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* Radix UI
+* Recharts
+
+### AI & Analytics
+
+* Google Gemini AI
+* Sentiment Analysis Engine
+* Satisfaction Score Generator
+* Review Intelligence System
+
+### Infrastructure
+
+* Redis
+* Celery
+* REST APIs
+
+---
+
+## System Architecture
 
 ```text
-Customer
-    │
-    ▼
-Frontend (Next.js)
-    │
-    ├── Records Voice
-    ├── Speech-to-Text
-    ├── Displays Messages
-    └── Plays AI Audio
-    │
-    ▼
-FastAPI Backend
-    │
+VoxAgent
+│
+├── Frontend (Next.js)
+│   ├── Customer Feedback Interface
+│   ├── Analytics Dashboard
+│   └── Review Management System
+│
+├── Backend (FastAPI)
+│   ├── Conversation Processing
+│   ├── Sentiment Analysis
+│   ├── Satisfaction Scoring
+│   ├── Analytics Engine
+│   └── API Services
+│
+├── Database
+│   ├── Customer Reviews
+│   ├── Conversations
+│   ├── Ratings
+│   └── Analytics Data
+│
+└── AI Layer
     ├── Gemini AI
-    │      └── Generates Replies
-    │
-    ├── Sarvam AI
-    │      ├── Text-to-Speech
-    │      └── Speech-to-Text
-    │
-    └── Database
-           └── Stores Conversations
+    ├── Sentiment Detection
+    └── Insight Generation
 ```
 
 ---
 
-# 🚀 Tech Stack
+# Installation and Setup
 
-## Frontend
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Web Audio API
-- MediaRecorder API
+## Prerequisites
 
-## Backend
-- FastAPI
-- Python
-- SQLAlchemy
-- Pydantic
+Before running VoxAgent, ensure the following software is installed:
 
-## AI Services
-- Google Gemini 2.5 Flash
-- Sarvam AI
-
-## Database
-- SQLite
-
-## Deployment
-- Vercel (Frontend)
-- Render (Backend)
+* Python 3.10+
+* Node.js 18+
+* PostgreSQL
+* npm or pnpm
+* Redis (Optional)
+* Git
 
 ---
 
-# 📂 Project Structure
+## Clone the Repository
 
-```text
-VoxAgent/
-│
-├── frontend/
-│   ├── app/
-│   ├── components/
-│   └── voice-feedback-portal.tsx
-│
-├── backend/
-│   ├── app/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   └── database.py
-│   │
-│   ├── main.py
-│   └── requirements.txt
-│
-└── README.md
+```bash
+git clone https://github.com/your-username/VoxAgent.git
+
+cd VoxAgent
 ```
 
 ---
 
-# ⚙️ Backend Endpoints
+## Backend Setup
 
-## Start Conversation
-
-### POST `/api/conversation`
-
-Request
-
-```json
-{
-  "session_id": 1,
-  "session_token": "abc123",
-  "message": "The service was good"
-}
-```
-
-Response
-
-```json
-{
-  "reply": "Thank you for your feedback. Could you tell me more about your experience?",
-  "audio": "<base64_wav>",
-  "end_call": false
-}
-```
-
----
-
-## Text-to-Speech
-
-### POST `/api/tts`
-
-Request
-
-```json
-{
-  "text": "Hello and welcome to Toyota Customer Feedback."
-}
-```
-
-Response
-
-```json
-{
-  "audio": "<base64_wav>"
-}
-```
-
----
-
-# 🔄 Conversation Flow
-
-1. Customer opens feedback link
-2. Introductory voice message plays
-3. Customer speaks
-4. Audio is transcribed
-5. Gemini generates a contextual response
-6. Sarvam converts the response into speech
-7. AI voice is played back
-8. Conversation continues automatically
-9. AI decides when sufficient feedback has been collected
-10. Session ends with a thank-you message
-
----
-
-# 💾 Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-GEMINI_API_KEY=your_gemini_key
-SARVAM_API_KEY=your_sarvam_key
-DATABASE_URL=sqlite:///voxagent.db
-```
-
----
-
-# 🛠️ Installation
-
-## Backend
+Navigate to the backend directory:
 
 ```bash
 cd backend
-
-pip install -r requirements.txt
 ```
 
-Run:
+Create a virtual environment:
+
+```bash
+python -m venv venv
+```
+
+Activate the environment:
+
+### Windows
+
+```bash
+venv\Scripts\activate
+```
+
+### Linux/macOS
+
+```bash
+source venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r app/requirements.txt
+```
+
+Create a `.env` file:
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/voxagent
+
+GEMINI_API_KEY=your_api_key
+
+REDIS_URL=redis://localhost:6379
+```
+
+Start the backend server:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Backend:
+Backend runs on:
 
 ```text
-http://127.0.0.1:8000
+http://localhost:8000
 ```
 
-Swagger Docs:
+API Documentation:
 
 ```text
-http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 ```
 
 ---
 
-## Frontend
+## Frontend Setup
+
+Open a new terminal:
 
 ```bash
 cd frontend
+```
 
+Install dependencies:
+
+```bash
 npm install
+```
+
+Run the application:
+
+```bash
 npm run dev
 ```
 
-Frontend:
+Frontend runs on:
 
 ```text
 http://localhost:3000
@@ -255,47 +272,119 @@ http://localhost:3000
 
 ---
 
-# 📈 Business Benefits
+## Optional Services
 
-- Higher survey completion rates
-- Better customer engagement
-- Reduced operational costs
-- Automated feedback collection
-- Real-time insights
-- Scalable cloud architecture
-- Improved customer experience
+Start Redis:
 
----
+```bash
+redis-server
+```
 
-# 🎯 Use Cases
+Start Celery Worker:
 
-- Automotive Service Feedback
-- Customer Satisfaction Surveys
-- Hospitality Feedback Collection
-- Healthcare Follow-Ups
-- Banking Customer Reviews
-- Telecom Customer Experience Programs
-- E-Commerce Post-Purchase Feedback
+```bash
+celery -A app.celery_app worker --loglevel=info
+```
 
 ---
 
-# 🔮 Future Enhancements
+# How VoxAgent Works
 
-- PostgreSQL support
-- Analytics Dashboard
-- Sentiment Analysis
-- Multi-language conversations
-- WhatsApp Integration
-- Automated Reporting
-- CRM Integration
-- Voice Cloning Support
+### Step 1: Customer Interaction
+
+Customers interact with VoxAgent through an intelligent conversational interface and provide feedback regarding a product or service.
+
+### Step 2: Feedback Collection
+
+The system gathers detailed customer opinions through adaptive and context-aware questions.
+
+### Step 3: AI Analysis
+
+Gemini AI analyzes customer responses to identify sentiment, emotions, concerns, and overall satisfaction.
+
+### Step 4: Satisfaction Scoring
+
+The platform generates customer satisfaction ratings based on the conversation and review content.
+
+### Step 5: Data Storage
+
+Conversations, ratings, sentiment scores, and review insights are securely stored in the database.
+
+### Step 6: Analytics Dashboard
+
+Businesses access the dashboard to monitor customer satisfaction, identify recurring issues, and track product performance.
+
+### Step 7: Product Improvement
+
+Organizations use the generated insights to improve products, services, and customer experiences.
 
 ---
 
-# 👨‍💻 Author
+## Use Cases
 
-**Pranav M & Jithin Jeevan**
+### Product Review Analysis
 
-VoxAgent was built as an AI-powered voice feedback platform demonstrating the integration of Generative AI, Speech-to-Text, Text-to-Speech, and modern web technologies to create intelligent customer interaction systems.
+Collect and analyze customer opinions about products.
+
+### Customer Satisfaction Monitoring
+
+Track customer happiness and satisfaction over time.
+
+### Service Quality Evaluation
+
+Measure service effectiveness using customer feedback.
+
+### Product Improvement
+
+Identify recurring complaints and improvement opportunities.
+
+### Customer Experience Analytics
+
+Understand customer behavior and sentiment trends.
+
+### Business Intelligence
+
+Transform feedback data into actionable business decisions.
 
 ---
+
+## Future Enhancements
+
+* Voice-based feedback collection
+* Multi-language support
+* Predictive customer satisfaction analytics
+* Real-time dashboard updates
+* Automated improvement recommendations
+* Customer segmentation and profiling
+* Advanced reporting and exports
+* Mobile application support
+
+---
+
+## Security
+
+* Secure API architecture
+* Environment-based configuration
+* Protected customer data storage
+* Scalable deployment support
+* Secure authentication and authorization
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+## Contributors
+
+Contributions, suggestions, and improvements are welcome.
+
+Please open an issue or submit a pull request to contribute to the project.
+
+---
+
+## Conclusion
+
+VoxAgent is an intelligent customer feedback intelligence platform that transforms customer conversations into meaningful business insights. Through AI-powered review collection, sentiment analysis, satisfaction scoring, and analytics-driven reporting, VoxAgent helps businesses better understand their customers and continuously improve products, services, and overall customer experiences.
